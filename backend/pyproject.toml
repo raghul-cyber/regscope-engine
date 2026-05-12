@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "regscope"
+version = "0.1.0"
+description = "Automated Cross-Border Data Compliance Intelligence"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg",
+    "alembic",
+    "pydantic-settings",
+    "celery",
+    "redis",
+    "qdrant-client",
+    "playwright",
+    "httpx",
+    "pdfminer.six",
+    "easyocr",
+    "langdetect",
+    "sentence-transformers",
+    "rank-bm25",
+    "structlog",
+    "pgvector"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov"
+]
