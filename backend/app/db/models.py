@@ -76,7 +76,7 @@ class ClauseEmbedding(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     clause_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("clauses.id"))
-    vector: Mapped[Any] = mapped_column(Vector(1024))
+    vector: Mapped[Any] = mapped_column(Vector(384))
     model_name: Mapped[str] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 

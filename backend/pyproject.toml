@@ -25,7 +25,9 @@ dependencies = [
     "sentence-transformers",
     "rank-bm25",
     "structlog",
-    "pgvector"
+    "pgvector",
+    "sentry-sdk[fastapi,celery,sqlalchemy]",
+    "prometheus-fastapi-instrumentator"
 ]
 
 [project.optional-dependencies]
@@ -34,3 +36,7 @@ dev = [
     "pytest-asyncio",
     "pytest-cov"
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+

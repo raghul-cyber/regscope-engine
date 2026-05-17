@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
+    QDRANT_API_KEY: str | None = None
     QDRANT_COLLECTION: str = "regscope_clauses"
     
     EMBEDDING_MODEL: str = "intfloat/multilingual-e5-large"
@@ -21,10 +22,11 @@ class Settings(BaseSettings):
     VERIFIER_STRICT_MODE: bool = True
     
     API_HOST: str = "0.0.0.0"
-    API_PORT: int = 8000
+    API_PORT: int = 7860
     CORS_ORIGINS: str = "http://localhost:3000,https://regscope.yourdomain.com"
     
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 settings = Settings()
