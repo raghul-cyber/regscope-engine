@@ -38,6 +38,9 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports: ["6333:6333"]
 
     steps:
       - uses: actions/checkout@v4
@@ -51,6 +54,7 @@ jobs:
         working-directory: backend
         run: |
           pip install --upgrade pip
+          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
           pip install -e ".[dev]"
           python -m spacy download en_core_web_sm
 
