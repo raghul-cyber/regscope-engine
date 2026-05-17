@@ -22,6 +22,8 @@ dependencies = [
     "pdfminer.six",
     "easyocr",
     "langdetect",
+    "spacy",
+    "beautifulsoup4",
     "sentence-transformers",
     "rank-bm25",
     "structlog",
