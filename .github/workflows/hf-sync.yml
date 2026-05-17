@@ -15,5 +15,12 @@ jobs:
       - name: Push to hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        # Replace your-hf-username below with your actual Hugging Face username!
-        run: git push --force https://raghul-cyber:$HF_TOKEN@huggingface.co/spaces/raghul-cyber/regscope-backend main
+        run: |
+          cd backend
+          git init
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+          git checkout -b main
+          git add .
+          git commit -m "Deploy to Hugging Face"
+          git push --force https://chanraghul:$HF_TOKEN@huggingface.co/spaces/chanraghul/regscope-backend main
