@@ -50,7 +50,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy application code
 COPY app/ ./app/
 COPY alembic.ini ./
-COPY scripts/ ./scripts/
+COPY migrations/ ./migrations/
 
 # Download spaCy models at build time (not runtime)
 RUN python -m spacy download en_core_web_sm && \
