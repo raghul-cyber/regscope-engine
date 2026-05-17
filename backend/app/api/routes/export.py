@@ -16,7 +16,7 @@ router = APIRouter()
 async def export_data(
     jurisdiction: Optional[str] = None,
     pillar: Optional[str] = None,
-    format: str = Query("json", regex="^(json|csv)$"),
+    format: str = Query("json", pattern="^(json|csv)$"),
     include_flags: bool = False,
     db: AsyncSession = Depends(get_db)
 ):
