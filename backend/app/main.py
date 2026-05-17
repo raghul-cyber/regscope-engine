@@ -8,7 +8,6 @@ from app.db.session import get_db
 from app.db.models import Document, Jurisdiction
 
 from app.api.routes import crawl, documents, clauses, search, export, audit, health
-from app.db.session import engine, Base
 
 # Sentry error tracking
 import sentry_sdk
