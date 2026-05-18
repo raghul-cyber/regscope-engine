@@ -11,11 +11,19 @@ logger = structlog.get_logger(__name__)
 
 class VectorStore:
     def __init__(self):
+        # Build robust URL for Qdrant client
+        host = settings.QDRANT_HOST
+        if host.startswith("http://") or host.startswith("https://"):
+            url = host
+        else:
+            scheme = "https" if settings.QDRANT_PORT == 443 else "http"
+            url = f"{scheme}://{host}"
+            if settings.QDRANT_PORT and settings.QDRANT_PORT != 80 and settings.QDRANT_PORT != 443:
+                url = f"{url}:{settings.QDRANT_PORT}"
+
         self.client = AsyncQdrantClient(
-            host=settings.QDRANT_HOST,
-            port=settings.QDRANT_PORT,
-            api_key=settings.QDRANT_API_KEY,
-            https=True if settings.QDRANT_PORT == 443 else False
+            url=url,
+            api_key=settings.QDRANT_API_KEY
         )
         self.collection_name = settings.QDRANT_COLLECTION
 

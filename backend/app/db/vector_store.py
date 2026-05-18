@@ -6,8 +6,20 @@ from app.config import settings
 
 class VectorStore:
     def __init__(self):
-        # Use localhost for scripts/local dev, service name for docker
-        self.client = QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT)
+        # Build robust URL for Qdrant client
+        host = settings.QDRANT_HOST
+        if host.startswith("http://") or host.startswith("https://"):
+            url = host
+        else:
+            scheme = "https" if settings.QDRANT_PORT == 443 else "http"
+            url = f"{scheme}://{host}"
+            if settings.QDRANT_PORT and settings.QDRANT_PORT != 80 and settings.QDRANT_PORT != 443:
+                url = f"{url}:{settings.QDRANT_PORT}"
+
+        self.client = QdrantClient(
+            url=url,
+            api_key=settings.QDRANT_API_KEY
+        )
         self.collection_name = settings.QDRANT_COLLECTION
         self._ensure_collection()
 
@@ -16,9 +28,8 @@ class VectorStore:
         exists = any(c.name == self.collection_name for c in collections)
         
         if not exists:
-            # We use 384 for local testing (MiniLM) and 1024 for production (E5-large)
-            # Check current model to decide dimension or just use 384 for now
-            dim = 384 
+            # Dynamically set vector size based on model
+            dim = 1024 if "e5-large" in settings.EMBEDDING_MODEL else 384
             self.client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config=models.VectorParams(size=dim, distance=models.Distance.COSINE),
