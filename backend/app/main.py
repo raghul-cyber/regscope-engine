@@ -34,10 +34,21 @@ if getattr(settings, "SENTRY_DSN", None):
         profiles_sample_rate=0.1,
     )
 
+from contextlib import asynccontextmanager
+from app.search.vector_store import VectorStore
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize Qdrant collection on startup
+    vs = VectorStore()
+    await vs.initialize_collection()
+    yield
+
 app = FastAPI(
     title="RegScope Engine",
     description="Automated Cross-Border Data Compliance Intelligence",
-    version="0.1.0"
+    version="0.1.0",
+    lifespan=lifespan
 )
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -67,9 +78,7 @@ app.include_router(audit.router, prefix="/api/v1", tags=["audit"])
 async def root():
     return {"status": "ok", "message": "RegScope API is online. Use /api/v1/search for queries."}
 
-@app.get("/health")
-async def health_check():
-    return {"status": "ok", "message": "RegScope Engine API is running."}
+
 
 @app.get("/api/v1/jurisdictions/stats")
 async def get_stats(db: AsyncSession = Depends(get_db)):

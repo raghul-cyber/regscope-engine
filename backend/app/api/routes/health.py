@@ -6,6 +6,8 @@ from app.config import settings
 import redis.asyncio as aioredis
 import time
 
+from sqlalchemy import text
+
 router = APIRouter()
 
 @router.get("/health")
@@ -17,7 +19,7 @@ async def health_check():
     # Database
     try:
         async for db in get_db():
-            await db.execute("SELECT 1")
+            await db.execute(text("SELECT 1"))
             break
         checks["database"] = "ok"
     except Exception as e:
