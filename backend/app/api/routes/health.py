@@ -38,7 +38,7 @@ async def health_check():
     try:
         vs = VectorStore()
         info = await vs.client.get_collection(vs.collection_name)
-        checks["qdrant"] = f"ok (vectors: {info.vectors_count})"
+        checks["qdrant"] = f"ok (points: {info.points_count})"
     except Exception as e:
         checks["qdrant"] = f"error: {str(e)}"
 
