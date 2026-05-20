@@ -19,26 +19,21 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           cd backend
+          rm -rf .git || true
           git init
           git config user.name "GitHub Action"
           git config user.email "action@github.com"
           git checkout -b main
           git add .
           git commit -m "Deploy API to Hugging Face"
-          if ! git push --force https://chanraghul:$HF_TOKEN@huggingface.co/spaces/chanraghul/regscope-backend main 2>../git_push_api.log; then
-            echo "Git push for API failed!"
-            cat ../git_push_api.log
-            exit 1
-          fi
+          git push --force https://chanraghul:$HF_TOKEN@huggingface.co/spaces/chanraghul/regscope-backend main
 
       - name: Push Worker to hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          rm -rf worker-deploy || true
-          exec &> "$GITHUB_WORKSPACE/debug_sync.log"
-          set -x
           cp -r backend worker-deploy
+          rm -rf worker-deploy/.git || true
           cp backend/Dockerfile.worker worker-deploy/Dockerfile
           if [ -f worker-deploy/README.md ]; then
             sed -i 's/title: Regscope Backend/title: Regscope Workers/g' worker-deploy/README.md
@@ -51,13 +46,3 @@ jobs:
           git add .
           git commit -m "Deploy Worker to Hugging Face"
           git push --force https://chanraghul:$HF_TOKEN@huggingface.co/spaces/chanraghul/regscope-workers main
-
-      - name: Upload logs on failure
-        if: failure()
-        run: |
-          git config user.name "GitHub Action"
-          git config user.email "action@github.com"
-          cp "$GITHUB_WORKSPACE/debug_sync.log" debug_sync.log || true
-          git add debug_sync.log || true
-          git commit -m "chore: upload debug logs for failed sync" || true
-          git push origin HEAD:debug-logs --force
