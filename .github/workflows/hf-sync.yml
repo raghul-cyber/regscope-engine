@@ -12,7 +12,7 @@ jobs:
         with:
           fetch-depth: 0
       
-      - name: Push to hub
+      - name: Push API to hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
@@ -22,5 +22,23 @@ jobs:
           git config user.email "action@github.com"
           git checkout -b main
           git add .
-          git commit -m "Deploy to Hugging Face"
+          git commit -m "Deploy API to Hugging Face"
           git push --force https://chanraghul:$HF_TOKEN@huggingface.co/spaces/chanraghul/regscope-backend main
+
+      - name: Push Worker to hub
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          cp -r backend worker-deploy
+          cp backend/Dockerfile.worker worker-deploy/Dockerfile
+          if [ -f worker-deploy/README.md ]; then
+            sed -i 's/title: Regscope Backend/title: Regscope Workers/g' worker-deploy/README.md
+          fi
+          cd worker-deploy
+          git init
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+          git checkout -b main
+          git add .
+          git commit -m "Deploy Worker to Hugging Face"
+          git push --force https://chanraghul:$HF_TOKEN@huggingface.co/spaces/chanraghul/regscope-workers main
