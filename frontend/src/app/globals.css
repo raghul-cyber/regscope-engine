@@ -1,5 +1,7 @@
 /* Google Fonts — loaded via next/font in layout.tsx, but we define fallbacks here */
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* ============================================================
    REGSCOPE DESIGN SYSTEM — Cyan Dark Theme
