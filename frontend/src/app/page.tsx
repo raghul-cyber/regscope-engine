@@ -3,137 +3,192 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { getJurisdictionStats, getClauses } from '../lib/api';
 import { JurisdictionStats } from '../lib/types';
+import { StatCard, SkeletonStatCard, PageHeader } from '../components/Shared';
+import {
+  FileText, Database, Globe, Activity, ArrowRight,
+  Search, Download, Bug, Scale, Zap, CheckCircle
+} from 'lucide-react';
 
 export default function Dashboard() {
   const [stats, setStats] = useState<JurisdictionStats[]>([]);
   const [totalClauses, setTotalClauses] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [statsData, clausesData] = await Promise.all([
+      const [s, c] = await Promise.all([
         getJurisdictionStats(),
-        getClauses({ pageSize: 1 })
+        getClauses({ pageSize: 1 }),
       ]);
-      setStats(statsData || []);
-      setTotalClauses(clausesData?.total || 0);
+      setStats(s || []);
+      setTotalClauses(c?.total || 0);
     } catch (e) {
-      console.error('Error fetching dashboard data:', e);
+      console.error(e);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Calculate totals
-  const totalDocuments = stats.reduce((acc, curr) => acc + curr.doc_count, 0);
-  const totalJurisdictions = stats.length;
+  const totalDocs = stats.reduce((a, b) => a + b.doc_count, 0);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-12 animate-fade-in">
-      {/* Welcome Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-[#161b22] to-[#0d1117] border border-[#30363d] p-8 md:p-10 rounded-3xl shadow-xl">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-tr from-[#58a6ff]/10 to-[#bc8cff]/10 rounded-full blur-[60px] pointer-events-none" />
-        <div className="relative z-10 space-y-4 max-w-2xl">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#58a6ff]/10 text-[#58a6ff] border border-[#58a6ff]/20">
-            🤖 RegScope Compliance Engine v0.1.0
-          </span>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
-            Cross-Border Regulatory <span className="bg-gradient-to-r from-[#58a6ff] to-[#7ee787] bg-clip-text text-transparent">Intelligence</span>
-          </h1>
-          <p className="text-[#8b949e] text-base md:text-lg leading-relaxed">
-            Automated crawler, vector-embedding indexer, and compliance mapper. Instantly search and verify regulatory requirements across multiple jurisdictions.
+    <div className="space-y-10 animate-fade-in">
+      <PageHeader
+        title="Compliance Intelligence"
+        subtitle="Real-time cross-border regulatory mapping across multiple jurisdictions"
+        actions={
+          <button onClick={fetchData} className="btn btn-secondary btn-sm">
+            <Activity size={14} /> Refresh
+          </button>
+        }
+      />
+
+      {/* ---- Hero Banner ---- */}
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border-base)] bg-gradient-to-br from-[var(--bg-surface)] to-[var(--bg-subtle)] p-8 md:p-10">
+        <div className="absolute inset-0 bg-gradient-to-r from-[var(--blue-500)]/5 via-transparent to-[var(--purple-500)]/5 pointer-events-none" />
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-[var(--blue-500)]/6 rounded-full blur-[80px] pointer-events-none" />
+        <div className="relative z-10 max-w-2xl space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="badge badge-blue"><Zap size={9} /> AI-Powered</span>
+            <span className="badge badge-green"><CheckCircle size={9} /> Live Database</span>
+          </div>
+          <h2 className="text-4xl font-black tracking-tight text-white leading-tight">
+            Cross-Border Regulatory
+            <span className="gradient-text block">Analysis Engine</span>
+          </h2>
+          <p className="text-[var(--text-muted)] text-base leading-relaxed">
+            Automated crawler, Qdrant vector-embedding indexer, and multi-jurisdiction compliance mapper.
+            Instantly search and verify regulatory requirements across India, Singapore, and EU.
           </p>
+          <div className="flex flex-wrap gap-3 pt-2">
+            <Link href="/search" className="btn btn-primary">
+              <Search size={15} /> Start Searching
+            </Link>
+            <Link href="/admin/crawl" className="btn btn-secondary">
+              <Bug size={15} /> Manage Crawlers
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[
-          { label: 'Scraped Documents', value: totalDocuments, icon: '📂', glow: 'shadow-[#58a6ff]/5 hover:shadow-[#58a6ff]/10' },
-          { label: 'Extracted Clauses', value: totalClauses, icon: '📜', glow: 'shadow-[#bc8cff]/5 hover:shadow-[#bc8cff]/10' },
-          { label: 'Jurisdictions Indexed', value: totalJurisdictions, icon: '🌍', glow: 'shadow-[#7ee787]/5 hover:shadow-[#7ee787]/10' },
-        ].map((card, idx) => (
-          <div 
-            key={idx} 
-            className={`bg-[#161b22] border border-[#30363d] p-6 rounded-2xl flex items-center justify-between shadow-lg hover:border-[#58a6ff]/30 transition-all duration-300 hover:-translate-y-1 ${card.glow}`}
-          >
-            <div className="space-y-1">
-              <p className="text-sm font-bold text-[#8b949e] uppercase tracking-wider">{card.label}</p>
-              {loading ? (
-                <div className="w-16 h-8 bg-[#0d1117]/80 animate-pulse rounded-lg mt-1" />
-              ) : (
-                <p className="text-4xl font-extrabold text-white">{card.value}</p>
-              )}
-            </div>
-            <span className="text-4xl bg-[#0d1117] p-3.5 rounded-xl border border-[#30363d]">{card.icon}</span>
-          </div>
-        ))}
+      {/* ---- Stats ---- */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        {loading ? (
+          <>
+            <SkeletonStatCard />
+            <SkeletonStatCard />
+            <SkeletonStatCard />
+          </>
+        ) : (
+          <>
+            <StatCard
+              label="Indexed Documents"
+              value={totalDocs.toLocaleString()}
+              icon={<Database size={20} />}
+              color="blue"
+            />
+            <StatCard
+              label="Extracted Clauses"
+              value={totalClauses.toLocaleString()}
+              icon={<FileText size={20} />}
+              color="green"
+            />
+            <StatCard
+              label="Active Jurisdictions"
+              value={stats.length}
+              icon={<Globe size={20} />}
+              color="purple"
+            />
+          </>
+        )}
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Jurisdictions Summary */}
-        <div className="lg:col-span-2 bg-[#161b22] border border-[#30363d] p-6 rounded-2xl shadow-xl flex flex-col">
-          <h2 className="text-xl font-bold text-white mb-6">Jurisdictions Registry</h2>
-          
+      {/* ---- Jurisdictions + Quick Actions ---- */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Jurisdiction registry */}
+        <div className="lg:col-span-2 card">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-base font-bold text-white">Jurisdiction Registry</h2>
+            <span className="badge badge-slate">{stats.length} indexed</span>
+          </div>
+
           {loading ? (
-            <div className="flex-1 flex flex-col items-center justify-center py-10 gap-3">
-              <div className="w-8 h-8 border-4 border-[#58a6ff] border-t-transparent rounded-full animate-spin" />
-              <p className="text-xs text-[#8b949e]">Loading registry details...</p>
+            <div className="space-y-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="flex justify-between items-center py-3 border-b border-[var(--border-subtle)] last:border-0">
+                  <div className="space-y-1.5">
+                    <div className="skeleton h-4 w-40 rounded" />
+                    <div className="skeleton h-3 w-16 rounded" />
+                  </div>
+                  <div className="skeleton h-8 w-16 rounded-lg" />
+                </div>
+              ))}
             </div>
           ) : stats.length > 0 ? (
-            <div className="divide-y divide-[#30363d] overflow-hidden flex-1">
-              {stats.map(j => (
-                <div key={j.code} className="py-4 first:pt-0 last:pb-0 flex items-center justify-between">
+            <div className="divide-y divide-[var(--border-subtle)]">
+              {stats.map((j, idx) => (
+                <div key={j.code} className="flex items-center justify-between py-4 first:pt-0 last:pb-0 animate-fade-in" style={{ animationDelay: `${idx * 0.08}s` }}>
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">🏛️</span>
+                    <div className="w-9 h-9 rounded-lg bg-[var(--blue-glow)] flex items-center justify-center text-sm font-bold text-[var(--blue-400)] shrink-0">
+                      {j.code}
+                    </div>
                     <div>
-                      <h3 className="font-semibold text-white">{j.name}</h3>
-                      <p className="text-xs text-[#8b949e] mt-0.5">Code: {j.code}</p>
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">{j.name}</p>
+                      <p className="text-xs text-[var(--text-faint)] flex items-center gap-1 mt-0.5">
+                        <span className="status-dot online" /> Synced
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold text-[#58a6ff]">{j.doc_count} docs</p>
-                    <p className="text-[10px] text-[#7ee787] font-semibold bg-[#7ee787]/10 px-2 py-0.5 rounded-full border border-[#7ee787]/20 uppercase mt-1">
-                      Synced
-                    </p>
+                    <p className="text-lg font-black tabular-nums text-[var(--blue-400)]">{j.doc_count}</p>
+                    <p className="text-[10px] text-[var(--text-faint)] uppercase font-bold">docs</p>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="py-12 text-center text-[#8b949e]">
-              No jurisdictions have been scraped yet. Visit the Crawl Manager to index documents.
+            <div className="py-8 text-center text-[var(--text-muted)] text-sm">
+              No jurisdictions indexed yet.{' '}
+              <Link href="/admin/crawl" className="text-[var(--blue-400)] hover:underline">Run a crawl →</Link>
             </div>
           )}
         </div>
 
-        {/* Quick Actions Panel */}
-        <div className="lg:col-span-1 bg-[#161b22] border border-[#30363d] p-6 rounded-2xl shadow-xl flex flex-col justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-white mb-6">Quick Actions</h2>
-            <div className="space-y-3">
-              {[
-                { label: 'Semantic Search', path: '/search', desc: 'Neural match queries against vector DB', color: 'hover:border-[#58a6ff]/40' },
-                { label: 'Browse Clauses', path: '/clauses', desc: 'Browse all verified compliance clauses', color: 'hover:border-[#bc8cff]/40' },
-                { label: 'Manage Scrapers', path: '/admin/crawl', desc: 'Trigger crawl tasks & feed pipelines', color: 'hover:border-[#7ee787]/40' },
-                { label: 'Export Reports', path: '/export', desc: 'Generate compliance audit checklists', color: 'hover:border-white/20' },
-              ].map((action, idx) => (
-                <Link 
-                  key={idx}
-                  href={action.path}
-                  className={`block p-4 rounded-xl bg-[#0d1117] border border-[#30363d] transition-all duration-200 group ${action.color}`}
+        {/* Quick actions */}
+        <div className="card flex flex-col">
+          <h2 className="text-base font-bold text-white mb-5">Quick Actions</h2>
+          <div className="space-y-2.5 flex-1">
+            {[
+              { label: 'Semantic Search',   sub: 'Neural vector matching',     path: '/search',      icon: Search,   color: 'var(--blue-400)' },
+              { label: 'Browse Clauses',    sub: 'Paginated clause explorer',  path: '/clauses',     icon: FileText, color: 'var(--green-400)' },
+              { label: 'Jurisdiction Compare', sub: 'Side-by-side analysis',  path: '/compare',     icon: Scale,    color: 'var(--purple-400)' },
+              { label: 'Crawl Manager',     sub: 'Trigger scrapers',           path: '/admin/crawl', icon: Bug,      color: 'var(--amber-400)' },
+              { label: 'Export Data',       sub: 'JSON / CSV downloads',       path: '/export',      icon: Download, color: 'var(--text-muted)' },
+            ].map(a => {
+              const Icon = a.icon;
+              return (
+                <Link
+                  key={a.path}
+                  href={a.path}
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-[var(--bg-elevated)] border border-transparent hover:border-[var(--border-base)] transition-all group"
                 >
-                  <p className="font-semibold text-white group-hover:text-[#58a6ff] transition-colors">{action.label}</p>
-                  <p className="text-xs text-[#8b949e] mt-1">{action.desc}</p>
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ background: `color-mix(in srgb, ${a.color} 12%, transparent)` }}
+                  >
+                    <Icon size={15} style={{ color: a.color }} />
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <p className="text-sm font-semibold text-[var(--text-primary)] leading-tight group-hover:text-white transition-colors">{a.label}</p>
+                    <p className="text-xs text-[var(--text-faint)] leading-tight mt-0.5">{a.sub}</p>
+                  </div>
+                  <ArrowRight size={14} className="text-[var(--text-faint)] group-hover:text-[var(--text-muted)] transition-colors shrink-0" />
                 </Link>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
       </div>

@@ -1,12 +1,45 @@
 import { JurisdictionStats, SearchResult, ClauseDetail } from './types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';
+// Use a proxy route to avoid CORS issues in production (Vercel → HF Space)
+const IS_SERVER = typeof window === 'undefined';
+
+function getApiBase() {
+  if (IS_SERVER) {
+    // Server-side: hit the external URL directly
+    return process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';
+  }
+  // Client-side: go through Next.js proxy to avoid CORS
+  return '/api/proxy';
+}
+
+async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const base = getApiBase();
+  const url = `${base}${path}`;
+  
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => 'Unknown error');
+    throw new Error(`API error ${res.status}: ${text}`);
+  }
+
+  // Handle empty responses (204, etc.)
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    return res as unknown as T;
+  }
+  return res.json();
+}
 
 export async function getJurisdictionStats(): Promise<JurisdictionStats[]> {
   try {
-    const res = await fetch(`${API_BASE}/jurisdictions/stats`, { cache: 'no-store' });
-    if (!res.ok) return [];
-    return await res.json();
+    return await apiFetch<JurisdictionStats[]>('/jurisdictions/stats');
   } catch (error) {
     console.error('Error fetching jurisdiction stats:', error);
     return [];
@@ -19,20 +52,15 @@ export async function searchClauses(
   pillars?: string[]
 ): Promise<SearchResult[]> {
   try {
-    const res = await fetch(`${API_BASE}/search`, {
+    const data = await apiFetch<{ results: SearchResult[] }>('/search', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         query,
         jurisdictions: jurisdictions?.length ? jurisdictions : undefined,
         pillars: pillars?.length ? pillars : undefined,
-        top_k: 20
+        top_k: 20,
       }),
     });
-    if (!res.ok) return [];
-    const data = await res.json();
     return data.results || [];
   } catch (error) {
     console.error('Error searching clauses:', error);
@@ -43,19 +71,23 @@ export async function searchClauses(
 export async function getClauses(params: {
   jurisdiction?: string;
   pillar?: string;
+  clause_type?: string;
+  topic?: string;
+  confidence_min?: number;
   page?: number;
   pageSize?: number;
 } = {}): Promise<{ items: any[]; total: number }> {
   try {
-    const queryParams = new URLSearchParams();
-    if (params.jurisdiction) queryParams.append('jurisdiction', params.jurisdiction);
-    if (params.pillar) queryParams.append('pillar', params.pillar);
-    if (params.page) queryParams.append('page', params.page.toString());
-    if (params.pageSize) queryParams.append('page_size', params.pageSize.toString());
+    const q = new URLSearchParams();
+    if (params.jurisdiction)   q.append('jurisdiction',   params.jurisdiction);
+    if (params.pillar)         q.append('pillar',         params.pillar);
+    if (params.clause_type)    q.append('clause_type',    params.clause_type);
+    if (params.topic)          q.append('topic',          params.topic);
+    if (params.confidence_min != null) q.append('confidence_min', String(params.confidence_min));
+    if (params.page)           q.append('page',      String(params.page));
+    if (params.pageSize)       q.append('page_size', String(params.pageSize));
 
-    const res = await fetch(`${API_BASE}/clauses?${queryParams.toString()}`, { cache: 'no-store' });
-    if (!res.ok) return { items: [], total: 0 };
-    return await res.json();
+    return await apiFetch<{ items: any[]; total: number }>(`/clauses?${q.toString()}`);
   } catch (error) {
     console.error('Error fetching clauses:', error);
     return { items: [], total: 0 };
@@ -64,43 +96,41 @@ export async function getClauses(params: {
 
 export async function getClauseDetail(id: string): Promise<ClauseDetail | null> {
   try {
-    const res = await fetch(`${API_BASE}/clauses/${id}`, { cache: 'no-store' });
-    if (!res.ok) return null;
-    return await res.json();
+    return await apiFetch<ClauseDetail>(`/clauses/${id}`);
   } catch (error) {
     console.error(`Error fetching clause ${id}:`, error);
     return null;
   }
 }
 
-export async function triggerCrawl(jurisdictionCode: string, depth: number = 2): Promise<{ success: boolean; message: string; jobId?: string }> {
+export async function triggerCrawl(
+  jurisdictionCode: string,
+  depth: number = 2
+): Promise<{ success: boolean; message: string; jobId?: string }> {
   try {
-    const res = await fetch(`${API_BASE}/crawl/crawl`, {
+    const data = await apiFetch<{ job_id: string; status: string; message: string }>('/crawl/crawl', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        jurisdiction_code: jurisdictionCode,
-        depth,
-      }),
+      body: JSON.stringify({ jurisdiction_code: jurisdictionCode, depth }),
     });
-    const data = await res.json();
-    if (!res.ok) {
-      return { success: false, message: data.detail || 'Failed to start crawl' };
-    }
     return { success: true, message: data.message, jobId: data.job_id };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error triggering crawl:', error);
-    return { success: false, message: 'Network error starting crawl' };
+    return { success: false, message: error?.message || 'Failed to start crawl job' };
+  }
+}
+
+export async function getJobStatus(jobId: string): Promise<any | null> {
+  try {
+    return await apiFetch<any>(`/crawl/jobs/${jobId}`);
+  } catch (error) {
+    console.error(`Error fetching job ${jobId}:`, error);
+    return null;
   }
 }
 
 export async function getAudit(clauseId: string): Promise<any | null> {
   try {
-    const res = await fetch(`${API_BASE}/audit/${clauseId}`, { cache: 'no-store' });
-    if (!res.ok) return null;
-    return await res.json();
+    return await apiFetch<any>(`/audit/${clauseId}`);
   } catch (error) {
     console.error(`Error fetching audit for clause ${clauseId}:`, error);
     return null;
@@ -113,16 +143,21 @@ export async function getDocuments(params: {
   pageSize?: number;
 } = {}): Promise<{ items: any[]; total: number }> {
   try {
-    const queryParams = new URLSearchParams();
-    if (params.jurisdiction) queryParams.append('jurisdiction', params.jurisdiction);
-    if (params.page) queryParams.append('page', params.page.toString());
-    if (params.pageSize) queryParams.append('page_size', params.pageSize.toString());
-
-    const res = await fetch(`${API_BASE}/documents?${queryParams.toString()}`, { cache: 'no-store' });
-    if (!res.ok) return { items: [], total: 0 };
-    return await res.json();
+    const q = new URLSearchParams();
+    if (params.jurisdiction) q.append('jurisdiction', params.jurisdiction);
+    if (params.page)         q.append('page',      String(params.page));
+    if (params.pageSize)     q.append('page_size', String(params.pageSize));
+    return await apiFetch<{ items: any[]; total: number }>(`/documents?${q.toString()}`);
   } catch (error) {
     console.error('Error fetching documents:', error);
     return { items: [], total: 0 };
   }
+}
+
+export function getExportUrl(jurisdiction?: string, pillar?: string, format: 'json' | 'csv' = 'json'): string {
+  const base = getApiBase();
+  const q = new URLSearchParams({ format });
+  if (jurisdiction && jurisdiction !== 'all') q.append('jurisdiction', jurisdiction);
+  if (pillar && pillar !== 'all')             q.append('pillar', pillar);
+  return `${base}/export?${q.toString()}`;
 }

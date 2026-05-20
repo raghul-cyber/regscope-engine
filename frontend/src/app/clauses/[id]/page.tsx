@@ -1,8 +1,9 @@
 "use client";
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { PillarTag, CitationBadge, ConfidenceMeter } from '../../../components/Shared';
 import { getAudit } from '../../../lib/api';
+import { PillarTag, ConfidenceMeter, CitationBadge, Loader } from '../../../components/Shared';
+import { ArrowLeft, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 
 export default function ClauseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -10,151 +11,106 @@ export default function ClauseDetailPage({ params }: { params: Promise<{ id: str
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadAuditData() {
-      setLoading(true);
-      try {
-        const auditData = await getAudit(id);
-        setData(auditData);
-      } catch (err) {
-        console.error('Error loading audit details:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadAuditData();
+    getAudit(id).then(setData).finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-40 gap-4">
-        <div className="w-10 h-10 border-4 border-[#58a6ff] border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-[#8b949e]">Retrieving source documents and verifications...</p>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="py-40"><Loader size="lg" text="Loading audit trail…" /></div>
+  );
 
-  if (!data) {
-    return (
-      <div className="max-w-2xl mx-auto py-20 text-center space-y-4">
-        <span className="text-4xl">⚠️</span>
-        <h2 className="text-xl font-bold text-white">Clause Not Found</h2>
-        <p className="text-[#8b949e] text-sm">
-          The requested compliance clause or its audit trail could not be resolved in the database.
-        </p>
-        <Link href="/clauses" className="inline-block bg-[#58a6ff] text-slate-950 font-bold px-6 py-2.5 rounded-xl text-sm">
-          &larr; Back to Browser
-        </Link>
-      </div>
-    );
-  }
+  if (!data) return (
+    <div className="max-w-lg mx-auto py-20 text-center space-y-4">
+      <AlertCircle size={40} className="text-[var(--red-400)] mx-auto" />
+      <h2 className="text-xl font-bold text-white">Clause Not Found</h2>
+      <p className="text-sm text-[var(--text-muted)]">Could not find audit data for clause ID: <code className="font-mono text-[var(--blue-400)]">{id}</code></p>
+      <Link href="/clauses" className="btn btn-secondary">← Back to Browser</Link>
+    </div>
+  );
+
+  const { clause, source_document, span_verification, surrounding_context } = data;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-[#8b949e]">
-        <Link href="/clauses" className="hover:text-white transition">
-          Clause Browser
-        </Link>
+    <div className="space-y-8 animate-fade-in">
+      <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+        <Link href="/clauses" className="hover:text-white flex items-center gap-1.5 transition-colors"><ArrowLeft size={14} /> Clause Browser</Link>
         <span>/</span>
-        <span className="text-white truncate max-w-xs">{data.clause.id}</span>
+        <span className="text-white font-mono text-xs truncate max-w-xs">{id}</span>
       </div>
 
-      <div>
-        <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#c9d1d9] to-[#8b949e] bg-clip-text text-transparent">
-          Compliance Audit Trail
-        </h1>
-        <p className="text-[#8b949e] mt-2">
-          Verify the pipeline extraction flow, confidence parameters, and OCR source span coordinates.
-        </p>
-      </div>
+      <h1 className="text-3xl font-black tracking-tight text-white">Compliance Audit Trail</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column: Extraction Details */}
-        <div className="space-y-6">
-          <div className="bg-[#161b22] border border-[#30363d] p-6 rounded-2xl shadow-xl space-y-6">
-            <div className="flex flex-wrap items-center gap-3">
-              <PillarTag pillar={data.clause.pillar} />
-              <span className="text-xs bg-[#0d1117] border border-[#30363d] px-3 py-1.5 rounded-full text-[#c9d1d9] uppercase font-bold tracking-wider">
-                Type: {data.clause.clause_type}
-              </span>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left: extraction details */}
+        <div className="space-y-5">
+          <div className="card space-y-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <PillarTag pillar={clause.pillar} />
+              <span className="badge badge-slate uppercase">{clause.clause_type}</span>
             </div>
 
-            <blockquote className="border-l-4 border-[#58a6ff] bg-[#0d1117]/80 p-5 rounded-r-2xl font-mono text-sm leading-relaxed text-white">
-              "{data.clause.raw_text}"
+            <blockquote className="border-l-2 border-[var(--blue-500)] pl-4 font-mono text-sm text-[var(--text-secondary)] leading-relaxed">
+              "{clause.raw_text}"
             </blockquote>
 
-            <div className="space-y-2">
-              <h3 className="text-xs font-bold text-[#8b949e] uppercase tracking-wider">Extraction Confidence</h3>
-              <ConfidenceMeter confidence={data.clause.confidence} />
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-faint)] mb-2">Extraction Confidence</p>
+              <ConfidenceMeter confidence={clause.confidence ?? 0} />
             </div>
           </div>
 
-          <div className="bg-[#161b22] border border-[#30363d] p-6 rounded-2xl shadow-xl space-y-4">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Source Citation Details</h3>
-            {data.clause.citations && data.clause.citations.length > 0 ? (
-              data.clause.citations.map((c: any, i: number) => (
-                <div key={c.id || i} className="pb-4 last:pb-0 border-b border-[#30363d] last:border-0 space-y-3">
-                  <div className="flex flex-wrap gap-2">
+          {clause.citations?.length > 0 && (
+            <div className="card space-y-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-faint)]">Citations ({clause.citations.length})</p>
+              {clause.citations.map((c: any, i: number) => (
+                <div key={c.id || i} className="space-y-2 pb-4 last:pb-0 border-b border-[var(--border-subtle)] last:border-0">
+                  <div className="flex flex-wrap gap-1.5">
                     {c.article && <CitationBadge text={`Article: ${c.article}`} />}
-                    {c.section_ref && <CitationBadge text={`Section: ${c.section_ref}`} />}
-                    {c.page_number && <CitationBadge text={`Page: ${c.page_number}`} />}
+                    {c.section_ref && <CitationBadge text={`§ ${c.section_ref}`} />}
+                    {c.page_number && <CitationBadge text={`p.${c.page_number}`} />}
                   </div>
-                  <p className="text-xs font-mono bg-[#0d1117] p-3 rounded-xl border border-[#30363d] text-[#8b949e] leading-relaxed">
-                    <span className="text-[#58a6ff] font-bold block mb-1">Snippet Match:</span>
+                  <p className="text-xs font-mono bg-[var(--bg-base)] p-3 rounded-lg border border-[var(--border-base)] text-[var(--text-muted)] leading-relaxed">
                     "{c.verbatim_snippet}"
                   </p>
                 </div>
-              ))
-            ) : (
-              <p className="text-sm text-[#8b949e]">No explicit citation references associated with this entry.</p>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Right Column: Source Audit */}
-        <div className="bg-[#161b22] border border-[#30363d] rounded-2xl overflow-hidden flex flex-col shadow-xl">
-          <div className="bg-[#1b2129] px-6 py-4 border-b border-[#30363d] flex justify-between items-center">
-            <h3 className="font-bold text-white text-sm uppercase tracking-wider">Verified Source Text Context</h3>
-            {data.span_verification && data.span_verification.verified ? (
-              <span className="text-[10px] font-bold bg-[#7ee787]/10 text-[#7ee787] border border-[#7ee787]/20 px-2 py-0.5 rounded-full uppercase">
-                Span Verified
-              </span>
-            ) : (
-              <span className="text-[10px] font-bold bg-[#f85149]/10 text-[#f85149] border border-[#f85149]/20 px-2 py-0.5 rounded-full uppercase">
-                Verification Idle
-              </span>
-            )}
+        {/* Right: source audit */}
+        <div className="card flex flex-col overflow-hidden p-0">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-base)] bg-[var(--bg-base)]/50">
+            <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-faint)]">Source Document Context</p>
+            {span_verification?.verified
+              ? <span className="badge badge-green"><CheckCircle size={9} /> Span Verified</span>
+              : <span className="badge badge-amber"><AlertCircle size={9} /> Unverified</span>
+            }
           </div>
 
-          <div className="p-6 flex-1 text-sm text-[#c9d1d9] font-mono leading-relaxed bg-[#0d1117] overflow-y-auto max-h-[350px]">
-            {data.surrounding_context ? (
-              data.surrounding_context.split(data.clause.raw_text).map((part: string, i: number, arr: any[]) => (
+          <div className="flex-1 p-5 overflow-y-auto max-h-[320px] font-mono text-xs leading-loose text-[var(--text-secondary)] bg-[var(--bg-base)]/30">
+            {surrounding_context ? (
+              surrounding_context.split(clause.raw_text).map((part: string, i: number, arr: any[]) => (
                 <React.Fragment key={i}>
                   {part}
                   {i < arr.length - 1 && (
-                    <span className="bg-[#d29922]/20 text-[#d29922] font-bold outline outline-1 outline-[#d29922]/50 px-1 rounded mx-0.5">
-                      {data.clause.raw_text}
-                    </span>
+                    <mark className="bg-[var(--amber-500)]/20 text-[var(--amber-400)] rounded px-0.5 mx-0.5 not-italic">
+                      {clause.raw_text}
+                    </mark>
                   )}
                 </React.Fragment>
               ))
             ) : (
-              <span className="text-[#8b949e] italic">No surrounding context file index available for this clause.</span>
+              <span className="text-[var(--text-faint)] italic">No surrounding context available.</span>
             )}
           </div>
 
-          <div className="bg-[#161b22] px-6 py-3.5 border-t border-[#30363d] text-xs text-[#8b949e] flex items-center justify-between">
-            <span className="font-mono truncate max-w-[70%]">
-              Hash: <span className="text-white font-semibold">{data.source_document?.content_hash || 'N/A'}</span>
+          <div className="px-5 py-3 border-t border-[var(--border-base)] flex items-center justify-between bg-[var(--bg-base)]/50">
+            <span className="text-[10px] font-mono text-[var(--text-faint)] truncate max-w-[60%]">
+              {source_document?.content_hash || 'No hash'}
             </span>
-            {data.source_document?.url && (
-              <a 
-                href={data.source_document.url} 
-                target="_blank" 
-                rel="noreferrer" 
-                className="text-[#58a6ff] hover:underline flex items-center gap-1 font-bold"
-              >
-                View Source URL &rarr;
+            {source_document?.url && (
+              <a href={source_document.url} target="_blank" rel="noreferrer" className="text-xs text-[var(--blue-400)] hover:underline flex items-center gap-1">
+                Source <ExternalLink size={10} />
               </a>
             )}
           </div>

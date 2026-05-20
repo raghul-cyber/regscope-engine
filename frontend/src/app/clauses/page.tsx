@@ -1,179 +1,120 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
-import { ClauseCard } from '../../components/Shared';
 import { getClauses } from '../../lib/api';
-import { Clause } from '../../lib/types';
+import { ClauseCard, SkeletonCard, EmptyState, Pagination, PageHeader } from '../../components/Shared';
+import { Filter } from 'lucide-react';
+
+const JURISDICTIONS = [
+  { code: '', label: 'All Jurisdictions' },
+  { code: 'IN', label: 'India (DPDP)' },
+  { code: 'SG', label: 'Singapore (PDPA)' },
+  { code: 'EU', label: 'EU (GDPR)' },
+];
+const PILLARS = [
+  { code: '', label: 'All Pillars' },
+  { code: 'pillar_6', label: 'Pillar 6 — Cross-Border' },
+  { code: 'pillar_7', label: 'Pillar 7 — Security' },
+];
+const TYPES = [
+  { code: '', label: 'All Types' },
+  { code: 'prohibition', label: 'Prohibition' },
+  { code: 'obligation', label: 'Obligation' },
+  { code: 'permission', label: 'Permission' },
+  { code: 'right', label: 'Right' },
+];
 
 export default function ClausesPage() {
-  const [clauses, setClauses] = useState<Clause[]>([]);
+  const [clauses, setClauses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [pageSize] = useState(10);
+  const PAGE_SIZE = 10;
 
-  // Filters
-  const [selectedJurisdiction, setSelectedJurisdiction] = useState<string>('');
-  const [selectedPillar, setSelectedPillar] = useState<string>('');
+  const [jur, setJur] = useState('');
+  const [pillar, setPillar] = useState('');
+  const [type, setType] = useState('');
 
-  const fetchClausesData = useCallback(async () => {
+  const fetch = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getClauses({
-        jurisdiction: selectedJurisdiction || undefined,
-        pillar: selectedPillar || undefined,
-        page,
-        pageSize,
-      });
-      setClauses(data.items || []);
-      setTotal(data.total || 0);
-    } catch (error) {
-      console.error('Error in Clause Browser:', error);
+      const d = await getClauses({ jurisdiction: jur || undefined, pillar: pillar || undefined, clause_type: type || undefined, page, pageSize: PAGE_SIZE });
+      setClauses(d.items || []);
+      setTotal(d.total || 0);
     } finally {
       setLoading(false);
     }
-  }, [selectedJurisdiction, selectedPillar, page, pageSize]);
+  }, [jur, pillar, type, page]);
 
-  useEffect(() => {
-    fetchClausesData();
-  }, [fetchClausesData]);
+  useEffect(() => { fetch(); }, [fetch]);
 
-  // Reset page when filters change
-  const handleJurisdictionFilter = (code: string) => {
-    setSelectedJurisdiction(code);
+  const setFilter = (setter: React.Dispatch<React.SetStateAction<string>>, val: string) => {
+    setter(val);
     setPage(1);
   };
-
-  const handlePillarFilter = (pillar: string) => {
-    setSelectedPillar(pillar);
-    setPage(1);
-  };
-
-  const totalPages = Math.ceil(total / pageSize);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
-      <div>
-        <h1 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-[#c9d1d9] to-[#8b949e] bg-clip-text text-transparent">
-          Clause Browser
-        </h1>
-        <p className="text-[#8b949e] mt-2">
-          Navigate and inspect extracted regulatory clauses and verification mappings.
-        </p>
-      </div>
+    <div className="space-y-8 animate-fade-in">
+      <PageHeader title="Clause Browser" subtitle={`${total.toLocaleString()} clauses in database`} />
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Sidebar Filters */}
-        <aside className="w-full lg:w-64 shrink-0 space-y-6 bg-[#161b22] border border-[#30363d] p-6 rounded-2xl h-fit">
-          <div>
-            <h3 className="text-xs font-bold text-[#8b949e] uppercase tracking-wider mb-4">Jurisdiction</h3>
-            <div className="flex flex-col gap-2">
-              {[
-                { code: '', label: 'All Jurisdictions' },
-                { code: 'IN', label: 'India (DPDP 2023)' },
-                { code: 'SG', label: 'Singapore (PDPA)' },
-                { code: 'EU', label: 'EU (GDPR)' }
-              ].map(j => (
-                <button
-                  key={j.code}
-                  onClick={() => handleJurisdictionFilter(j.code)}
-                  className={`text-left px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                    selectedJurisdiction === j.code
-                      ? 'bg-[#58a6ff]/10 text-[#58a6ff] border border-[#58a6ff]/20'
-                      : 'text-[#8b949e] hover:text-white border border-transparent'
-                  }`}
-                >
-                  {j.label}
-                </button>
-              ))}
-            </div>
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Sidebar filters */}
+        <aside className="w-full lg:w-56 shrink-0 card space-y-6 h-fit">
+          <div className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
+            <Filter size={14} /> Filters
           </div>
 
-          <div className="pt-4 border-t border-[#30363d]/60">
-            <h3 className="text-xs font-bold text-[#8b949e] uppercase tracking-wider mb-4">Compliance Pillar</h3>
-            <div className="flex flex-col gap-2">
-              {[
-                { code: '', label: 'All Pillars' },
-                { code: 'pillar_6', label: 'Pillar 6 (Cross-Border)' },
-                { code: 'pillar_7', label: 'Pillar 7 (Security Safeguards)' }
-              ].map(p => (
-                <button
-                  key={p.code}
-                  onClick={() => handlePillarFilter(p.code)}
-                  className={`text-left px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                    selectedPillar === p.code
-                      ? 'bg-[#58a6ff]/10 text-[#58a6ff] border border-[#58a6ff]/20'
-                      : 'text-[#8b949e] hover:text-white border border-transparent'
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
+          {[
+            { label: 'Jurisdiction', options: JURISDICTIONS, value: jur, setter: setJur },
+            { label: 'Pillar', options: PILLARS, value: pillar, setter: setPillar },
+            { label: 'Clause Type', options: TYPES, value: type, setter: setType },
+          ].map(f => (
+            <div key={f.label}>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-faint)] mb-2">{f.label}</p>
+              <div className="flex flex-col gap-0.5">
+                {f.options.map(o => (
+                  <button
+                    key={o.code}
+                    onClick={() => setFilter(f.setter, o.code)}
+                    className={`text-left text-sm px-2.5 py-1.5 rounded-lg transition-all font-medium
+                      ${f.value === o.code
+                        ? 'bg-[var(--blue-glow)] text-[var(--blue-400)] border border-[rgba(59,130,246,0.2)]'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'
+                      }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          ))}
         </aside>
 
-        {/* Main Content */}
-        <section className="flex-1 space-y-6">
-          <div className="flex justify-between items-center bg-[#161b22]/40 border border-[#30363d]/60 px-6 py-4 rounded-2xl">
-            <span className="text-sm font-medium text-[#8b949e]">
-              Showing {clauses.length} of {total} clauses
-            </span>
-            <div className="flex gap-1.5">
-              {selectedJurisdiction && (
-                <span className="text-xs bg-[#58a6ff]/10 text-[#58a6ff] px-2.5 py-1 rounded-full border border-[#58a6ff]/20">
-                  {selectedJurisdiction}
-                </span>
-              )}
-              {selectedPillar && (
-                <span className="text-xs bg-[#bc8cff]/10 text-[#bc8cff] px-2.5 py-1 rounded-full border border-[#bc8cff]/20">
-                  {selectedPillar.replace('_', ' ').toUpperCase()}
-                </span>
-              )}
+        {/* Main content */}
+        <section className="flex-1 space-y-4">
+          {/* Active filters chips */}
+          {(jur || pillar || type) && (
+            <div className="flex flex-wrap gap-2">
+              {jur    && <span className="badge badge-blue">{jur} <button className="ml-1 opacity-60 hover:opacity-100" onClick={() => setJur('')}>×</button></span>}
+              {pillar && <span className="badge badge-green">{pillar} <button className="ml-1 opacity-60 hover:opacity-100" onClick={() => setPillar('')}>×</button></span>}
+              {type   && <span className="badge badge-amber">{type} <button className="ml-1 opacity-60 hover:opacity-100" onClick={() => setType('')}>×</button></span>}
             </div>
-          </div>
+          )}
 
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <div className="w-10 h-10 border-4 border-[#58a6ff] border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-[#8b949e]">Loading clauses from DB...</p>
-            </div>
+            <div className="space-y-4">{[1,2,3].map(i => <SkeletonCard key={i} />)}</div>
           ) : clauses.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6">
-              {clauses.map(c => (
-                <ClauseCard key={c.id} clause={c} />
-              ))}
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-6 border-t border-[#30363d]/60">
-                  <button
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="px-4 py-2 text-sm font-medium bg-[#161b22] border border-[#30363d] hover:border-[#58a6ff]/50 rounded-xl text-[#c9d1d9] disabled:opacity-40 disabled:hover:border-[#30363d] transition"
-                  >
-                    &larr; Previous
-                  </button>
-                  <span className="text-sm text-[#8b949e]">
-                    Page {page} of {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="px-4 py-2 text-sm font-medium bg-[#161b22] border border-[#30363d] hover:border-[#58a6ff]/50 rounded-xl text-[#c9d1d9] disabled:opacity-40 disabled:hover:border-[#30363d] transition"
-                  >
-                    Next &rarr;
-                  </button>
-                </div>
-              )}
-            </div>
+            <>
+              <div className="space-y-4">
+                {clauses.map((c, i) => (
+                  <div key={c.id} className="animate-fade-in" style={{ animationDelay: `${i * 0.04}s` }}>
+                    <ClauseCard clause={c} />
+                  </div>
+                ))}
+              </div>
+              <Pagination page={page} totalPages={Math.ceil(total / PAGE_SIZE)} onChange={setPage} />
+            </>
           ) : (
-            <div className="bg-[#161b22]/50 border border-[#30363d]/60 rounded-2xl py-16 text-center">
-              <span className="text-4xl">📄</span>
-              <h3 className="mt-4 text-lg font-semibold text-white">No clauses found</h3>
-              <p className="text-[#8b949e] mt-1 max-w-sm mx-auto text-sm">
-                No compliance entries matching the active filters exist in the database. Try changing filters.
-              </p>
-            </div>
+            <EmptyState icon="📄" title="No clauses found" description="Adjust the filters or run a crawl to index new documents." action={{ label: 'Go to Crawl Manager', href: '/admin/crawl' }} />
           )}
         </section>
       </div>
