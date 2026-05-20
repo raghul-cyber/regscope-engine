@@ -62,8 +62,8 @@ export default function SearchBar() {
       </form>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        {results.map((res) => (
-          <div key={res.id} className="glass-card animate-fade-in">
+        {results.map((res, i) => (
+          <div key={res.clause?.id || i} className="glass-card animate-fade-in">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
               <span style={{ 
                 background: 'var(--primary-glow)', 
@@ -73,13 +73,13 @@ export default function SearchBar() {
                 fontSize: '0.8rem',
                 fontWeight: 'bold'
               }}>
-                {res.pillar.toUpperCase()}
+                {res.clause?.pillar?.toUpperCase() || ''}
               </span>
               <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                 Match: {(res.score * 100).toFixed(1)}%
               </span>
             </div>
-            <p style={{ fontSize: '1.05rem', marginBottom: '1.5rem' }}>{res.text}</p>
+            <p style={{ fontSize: '1.05rem', marginBottom: '1.5rem' }}>{res.clause?.raw_text}</p>
             <div style={{ 
               padding: '1rem', 
               background: 'rgba(0,0,0,0.2)', 
@@ -90,7 +90,7 @@ export default function SearchBar() {
                 VERBATIM CITATION
               </span>
               <p style={{ fontStyle: 'italic', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                "{res.verbatim}..."
+                "{res.clause?.citations?.[0]?.verbatim_snippet || 'N/A'}..."
               </p>
             </div>
           </div>
