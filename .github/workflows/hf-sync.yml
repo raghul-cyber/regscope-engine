@@ -25,7 +25,11 @@ jobs:
           git checkout -b main
           git add .
           git commit -m "Deploy API to Hugging Face"
-          git push --force https://chanraghul:$HF_TOKEN@huggingface.co/spaces/chanraghul/regscope-backend main
+          if ! git push --force https://chanraghul:$HF_TOKEN@huggingface.co/spaces/chanraghul/regscope-backend main 2>../git_push_api.log; then
+            echo "Git push for API failed!"
+            cat ../git_push_api.log
+            exit 1
+          fi
 
       - name: Push Worker to hub
         env:
@@ -44,16 +48,16 @@ jobs:
           git add .
           git commit -m "Deploy Worker to Hugging Face"
           if ! git push --force https://chanraghul:$HF_TOKEN@huggingface.co/spaces/chanraghul/regscope-workers main 2>../git_push_worker.log; then
-            echo "Git push failed!"
+            echo "Git push for Worker failed!"
             cat ../git_push_worker.log
             exit 1
           fi
 
-      - name: Upload logs on failure
+      - name: Upload debug logs
         if: failure()
-        run: |
-          git config user.name "GitHub Action"
-          git config user.email "action@github.com"
-          git add git_push_worker.log || true
-          git commit -m "chore: upload debug logs for failed sync" || true
-          git push origin HEAD:debug-logs --force
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-logs
+          path: |
+            git_push_api.log
+            git_push_worker.log
