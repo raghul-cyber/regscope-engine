@@ -1,43 +1,54 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Syne, IBM_Plex_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import NavigationShell from "../components/NavigationShell";
+import Sidebar from "../components/Sidebar";
+import Topbar from "../components/Topbar";
 
-// Add Sentry for frontend error tracking
-import * as Sentry from "@sentry/nextjs";
-
-if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-    environment: process.env.NODE_ENV,
-    tracesSampleRate: 0.1,
-  });
-}
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const syne = Syne({
+  variable: "--font-syne",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const ibmPlex = IBM_Plex_Sans({
+  variable: "--font-ibm",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const jetbrains = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "RegScope - Cross-Border Compliance Intelligence",
-  description: "Automated Cross-Border Regulatory Mapping and Analysis",
+  title: "RegScope — Cross-Border Compliance Intelligence",
+  description:
+    "Automated regulatory mapping and analysis across India, Singapore, and EU jurisdictions",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body className="bg-[#0a0c10] text-[#c9d1d9] antialiased">
-        <NavigationShell>{children}</NavigationShell>
+    <html
+      lang="en"
+      className={`${syne.variable} ${ibmPlex.variable} ${jetbrains.variable}`}
+    >
+      <body
+        className="antialiased min-h-screen"
+        style={{
+          fontFamily: "var(--font-ibm), system-ui, sans-serif",
+          backgroundColor: "var(--bg-base)",
+          color: "var(--text-primary)",
+        }}
+      >
+        <Sidebar />
+        <div className="md:ml-60 min-h-screen flex flex-col">
+          <Topbar />
+          <main className="flex-1">{children}</main>
+        </div>
       </body>
     </html>
   );

@@ -1,13 +1,13 @@
 "use client";
-import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
-import { getJurisdictionStats, getClauses } from '../lib/api';
-import { JurisdictionStats } from '../lib/types';
-import { StatCard, SkeletonStatCard, PageHeader } from '../components/Shared';
+import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { getJurisdictionStats, getClauses } from "../lib/api";
+import { JurisdictionStats } from "../lib/types";
+import { StatCard, Spinner } from "../components/Shared";
 import {
-  FileText, Database, Globe, Activity, ArrowRight,
-  Search, Download, Bug, Scale, Zap, CheckCircle
-} from 'lucide-react';
+  RefreshCw, Search, FileText, Scale, Bug, Download,
+  Globe, Database, BarChart3, Clock, ArrowRight
+} from "lucide-react";
 
 export default function Dashboard() {
   const [stats, setStats] = useState<JurisdictionStats[]>([]);
@@ -17,175 +17,144 @@ export default function Dashboard() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, c] = await Promise.all([
-        getJurisdictionStats(),
-        getClauses({ pageSize: 1 }),
-      ]);
+      const [s, c] = await Promise.all([getJurisdictionStats(), getClauses({ pageSize: 1 })]);
       setStats(s || []);
       setTotalClauses(c?.total || 0);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const totalDocs = stats.reduce((a, b) => a + b.doc_count, 0);
 
+  const ACTIONS = [
+    { title: "Semantic Search",  sub: "AI vector matching",       href: "/search",      icon: Search },
+    { title: "Browse Clauses",   sub: "Paginated explorer",       href: "/clauses",     icon: FileText },
+    { title: "Compare",          sub: "Side-by-side analysis",    href: "/compare",     icon: Scale },
+    { title: "Crawl Manager",    sub: "Trigger scrapers",         href: "/admin/crawl", icon: Bug },
+    { title: "Export Data",      sub: "JSON / CSV downloads",     href: "/export",      icon: Download },
+  ];
+
   return (
-    <div className="space-y-10 animate-fade-in">
-      <PageHeader
-        title="Compliance Intelligence"
-        subtitle="Real-time cross-border regulatory mapping across multiple jurisdictions"
-        actions={
-          <button onClick={fetchData} className="btn btn-secondary btn-sm">
-            <Activity size={14} /> Refresh
+    <div>
+      {/* Hero */}
+      <section className="page-header">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 max-w-7xl mx-auto">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="badge-green">● Live Database</span>
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>AI-Powered</span>
+            </div>
+            <h1
+              className="text-3xl md:text-4xl font-bold leading-tight mb-3"
+              style={{ fontFamily: "var(--font-syne)" }}
+            >
+              Cross-Border Regulatory
+              <br />
+              Analysis Engine
+            </h1>
+            <p className="text-base max-w-xl leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+              Automated crawler, Qdrant vector-embedding indexer, and multi-jurisdiction
+              compliance mapper across India, Singapore, and EU.
+            </p>
+          </div>
+          <button onClick={fetchData} className="btn-ghost shrink-0">
+            <RefreshCw size={14} /> Refresh
           </button>
-        }
-      />
-
-      {/* ---- Hero Banner ---- */}
-      <div className="relative overflow-hidden rounded-2xl border border-[var(--border-base)] bg-gradient-to-br from-[var(--bg-surface)] to-[var(--bg-subtle)] p-8 md:p-10">
-        <div className="absolute inset-0 bg-gradient-to-r from-[var(--blue-500)]/5 via-transparent to-[var(--purple-500)]/5 pointer-events-none" />
-        <div className="absolute -top-20 -right-20 w-64 h-64 bg-[var(--blue-500)]/6 rounded-full blur-[80px] pointer-events-none" />
-        <div className="relative z-10 max-w-2xl space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="badge badge-blue"><Zap size={9} /> AI-Powered</span>
-            <span className="badge badge-green"><CheckCircle size={9} /> Live Database</span>
-          </div>
-          <h2 className="text-4xl font-black tracking-tight text-white leading-tight">
-            Cross-Border Regulatory
-            <span className="gradient-text block">Analysis Engine</span>
-          </h2>
-          <p className="text-[var(--text-muted)] text-base leading-relaxed">
-            Automated crawler, Qdrant vector-embedding indexer, and multi-jurisdiction compliance mapper.
-            Instantly search and verify regulatory requirements across India, Singapore, and EU.
-          </p>
-          <div className="flex flex-wrap gap-3 pt-2">
-            <Link href="/search" className="btn btn-primary">
-              <Search size={15} /> Start Searching
-            </Link>
-            <Link href="/admin/crawl" className="btn btn-secondary">
-              <Bug size={15} /> Manage Crawlers
-            </Link>
-          </div>
         </div>
-      </div>
+      </section>
 
-      {/* ---- Stats ---- */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        {loading ? (
-          <>
-            <SkeletonStatCard />
-            <SkeletonStatCard />
-            <SkeletonStatCard />
-          </>
-        ) : (
-          <>
-            <StatCard
-              label="Indexed Documents"
-              value={totalDocs.toLocaleString()}
-              icon={<Database size={20} />}
-              color="blue"
-            />
-            <StatCard
-              label="Extracted Clauses"
-              value={totalClauses.toLocaleString()}
-              icon={<FileText size={20} />}
-              color="green"
-            />
-            <StatCard
-              label="Active Jurisdictions"
-              value={stats.length}
-              icon={<Globe size={20} />}
-              color="purple"
-            />
-          </>
-        )}
-      </div>
+      <div className="page-content max-w-7xl mx-auto space-y-8">
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger">
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rs-card-static">
+                <div className="skeleton h-3 w-24 mb-3" />
+                <div className="skeleton h-8 w-16 mb-2" />
+                <div className="skeleton h-3 w-20" />
+              </div>
+            ))
+          ) : (
+            <>
+              <StatCard label="Jurisdictions Indexed" value={stats.length} icon={<Globe size={18} />} />
+              <StatCard label="Compliance Clauses" value={totalClauses.toLocaleString()} icon={<BarChart3 size={18} />} />
+              <StatCard label="Documents Scraped" value={totalDocs.toLocaleString()} icon={<Database size={18} />} />
+              <StatCard label="Pillars Mapped" value="2" icon={<Clock size={18} />} sub="Pillar 6 & 7" />
+            </>
+          )}
+        </div>
 
-      {/* ---- Jurisdictions + Quick Actions ---- */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Jurisdiction registry */}
-        <div className="lg:col-span-2 card">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-base font-bold text-white">Jurisdiction Registry</h2>
-            <span className="badge badge-slate">{stats.length} indexed</span>
-          </div>
+        {/* Jurisdiction Registry */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4" style={{ fontFamily: "var(--font-syne)" }}>
+            Jurisdiction Registry
+          </h2>
 
           {loading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="flex justify-between items-center py-3 border-b border-[var(--border-subtle)] last:border-0">
-                  <div className="space-y-1.5">
-                    <div className="skeleton h-4 w-40 rounded" />
-                    <div className="skeleton h-3 w-16 rounded" />
-                  </div>
-                  <div className="skeleton h-8 w-16 rounded-lg" />
-                </div>
-              ))}
-            </div>
+            <Spinner text="Loading jurisdictions…" />
           ) : stats.length > 0 ? (
-            <div className="divide-y divide-[var(--border-subtle)]">
-              {stats.map((j, idx) => (
-                <div key={j.code} className="flex items-center justify-between py-4 first:pt-0 last:pb-0 animate-fade-in" style={{ animationDelay: `${idx * 0.08}s` }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-[var(--blue-glow)] flex items-center justify-center text-sm font-bold text-[var(--blue-400)] shrink-0">
-                      {j.code}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 stagger">
+              {stats.map(j => (
+                <div key={j.code} className="rs-card-static">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold"
+                        style={{ background: "rgba(0,217,255,0.1)", color: "var(--accent-cyan)" }}
+                      >
+                        {j.code}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{j.name}</p>
+                        <p className="text-xs flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
+                          <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse-dot" style={{ background: "var(--accent-green)" }} />
+                          Indexed
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--text-primary)]">{j.name}</p>
-                      <p className="text-xs text-[var(--text-faint)] flex items-center gap-1 mt-0.5">
-                        <span className="status-dot online" /> Synced
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-black tabular-nums text-[var(--blue-400)]">{j.doc_count}</p>
-                    <p className="text-[10px] text-[var(--text-faint)] uppercase font-bold">docs</p>
+                    <span className="badge-cyan">{j.doc_count} docs</span>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="py-8 text-center text-[var(--text-muted)] text-sm">
-              No jurisdictions indexed yet.{' '}
-              <Link href="/admin/crawl" className="text-[var(--blue-400)] hover:underline">Run a crawl →</Link>
+            <div className="flex flex-col items-center py-16 text-center">
+              <Globe size={36} style={{ color: "var(--text-muted)" }} className="mb-4" />
+              <p className="text-sm font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
+                No jurisdictions indexed yet
+              </p>
+              <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
+                Run a crawl to populate the database
+              </p>
+              <Link href="/admin/crawl" className="btn-primary">Go to Crawl Manager</Link>
             </div>
           )}
         </div>
 
-        {/* Quick actions */}
-        <div className="card flex flex-col">
-          <h2 className="text-base font-bold text-white mb-5">Quick Actions</h2>
-          <div className="space-y-2.5 flex-1">
-            {[
-              { label: 'Semantic Search',   sub: 'Neural vector matching',     path: '/search',      icon: Search,   color: 'var(--blue-400)' },
-              { label: 'Browse Clauses',    sub: 'Paginated clause explorer',  path: '/clauses',     icon: FileText, color: 'var(--green-400)' },
-              { label: 'Jurisdiction Compare', sub: 'Side-by-side analysis',  path: '/compare',     icon: Scale,    color: 'var(--purple-400)' },
-              { label: 'Crawl Manager',     sub: 'Trigger scrapers',           path: '/admin/crawl', icon: Bug,      color: 'var(--amber-400)' },
-              { label: 'Export Data',       sub: 'JSON / CSV downloads',       path: '/export',      icon: Download, color: 'var(--text-muted)' },
-            ].map(a => {
+        {/* Quick Actions */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4" style={{ fontFamily: "var(--font-syne)" }}>
+            Quick Actions
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 stagger">
+            {ACTIONS.map(a => {
               const Icon = a.icon;
               return (
                 <Link
-                  key={a.path}
-                  href={a.path}
-                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-[var(--bg-elevated)] border border-transparent hover:border-[var(--border-base)] transition-all group"
+                  key={a.href}
+                  href={a.href}
+                  className="group block rs-card"
+                  style={{ padding: "1.25rem" }}
                 >
                   <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                    style={{ background: `color-mix(in srgb, ${a.color} 12%, transparent)` }}
+                    className="w-10 h-10 rounded-lg flex items-center justify-center mb-4 transition-transform group-hover:scale-110"
+                    style={{ background: "rgba(0,217,255,0.1)", color: "var(--accent-cyan)" }}
                   >
-                    <Icon size={15} style={{ color: a.color }} />
+                    <Icon size={18} />
                   </div>
-                  <div className="flex-1 overflow-hidden">
-                    <p className="text-sm font-semibold text-[var(--text-primary)] leading-tight group-hover:text-white transition-colors">{a.label}</p>
-                    <p className="text-xs text-[var(--text-faint)] leading-tight mt-0.5">{a.sub}</p>
-                  </div>
-                  <ArrowRight size={14} className="text-[var(--text-faint)] group-hover:text-[var(--text-muted)] transition-colors shrink-0" />
+                  <p className="text-sm font-semibold mb-1" style={{ color: "var(--text-primary)" }}>{a.title}</p>
+                  <p className="text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>{a.sub}</p>
                 </Link>
               );
             })}
